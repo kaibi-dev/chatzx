@@ -11,16 +11,15 @@
 		crossorigin="anonymous"></script>
 	<script src="https://unpkg.com/htmx-ext-ws@2.0.1/ws.js"></script>
 	<script src="https://unpkg.com/htmx-ext-remove-me@2.0.0/remove-me.js"></script>
+	<script src="https://unpkg.com/htmx-ext-debug@2.0.0/debug.js"></script>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
 </head>
 
 <body>
-	<h1>htmx zig test</h1>
-
-	<button hx-get="/click">Click Me</button>
+	<h1>ChatZX</h1>
 
 	<button hx-get="/modal" hx-target="#modals-here" hx-trigger="click" data-bs-toggle="modal"
-		data-bs-target="#modals-here" class="btn primary">
+		data-bs-target="#modals-here" class="btn btn-secondary">
 		Online Users
 	</button>
 
@@ -34,11 +33,14 @@
 	<div hx-ext="ws" ws-connect="/chat">
 		<div id="notifications" hx-ext="remove-me"></div>
 		<div id="chat-message" hx-swap="beforeend" hx-swap-oob="beforeend" class="col"></div>
-		<form id="chat-form" ws-send>
-			<input name="chat-message" />
+		<form id="chat-form" hx-on::ws-after-send="this.reset()" ws-send> 
+			<input id="chat-input" name="chat-input"/>
 			<button type="submit" class="btn btn-primary">Send</button>
 		</form>
 	</div>
+
+	<br />
+	<button hx-get="/click">Click Me</button>
 	<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
 		integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
 		crossorigin="anonymous"></script>

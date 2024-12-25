@@ -83,7 +83,7 @@ pub const Client = struct {
         const json = try std.json.parseFromSlice(std.json.Value, allocator, data, .{});
         defer json.deinit();
 
-        const msg = json.value.object.get("chat-message").?.string;
+        const msg = json.value.object.get("chat-input").?.string;
 
         const formatted = try std.fmt.allocPrint(allocator,
             \\<div id="chat-message" hx-swap-oob="beforeend" class="d-flex mb-3">
