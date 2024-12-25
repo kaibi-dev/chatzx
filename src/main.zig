@@ -2,26 +2,20 @@ const std = @import("std");
 const httpz = @import("httpz");
 const ws = @import("ws.zig");
 
+const PORT = 8080;
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 
-    // We pass a "void" handler. This is the simplest, but limits what we can do
-    // The last parameter is an instance of our handler. Since we have
-    // a void handler, we pass a void value: i.e. {}.
     var server = try httpz.Server(ws.Handler).init(allocator, .{
-        .port = 8080,
+        .port = PORT,
         .request = .{
-            // httpz has a number of tweakable configuration settings (see readme)
-            // by default, it won't read form data. We need to configure a max
-            // field count (since one of our examples reads form data)
             .max_form_count = 20,
         },
     }, ws.Handler{});
     defer server.deinit();
 
-    // ensures a clean shutdown, finishing off any existing requests
-    // see 09_shutdown.zig for how to to break server.listen with an interrupt
     defer server.stop();
 
     var router = server.router(.{});
@@ -31,7 +25,7 @@ pub fn main() !void {
     router.get("/modal", modal, .{});
     router.get("/chat", ws.ws, .{});
 
-    std.debug.print("Server listening on port {d}\n", .{8080});
+    std.debug.print("Server listening on port {d}\n", .{PORT});
 
     try server.listen();
 }
