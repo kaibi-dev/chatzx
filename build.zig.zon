@@ -1,9 +1,7 @@
 .{
-   .name = "chatzx",
+    .name = "chatzx",
 
     .version = "0.0.0",
-
-    .minimum_zig_version = "master",
 
     .dependencies = .{
         .httpz = .{

@@ -6,12 +6,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>htmx zig</title>
     <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
-    
+    <script src="https://unpkg.com/htmx-ext-ws@2.0.1/ws.js"></script>
 </head>
 <body>
     <h1>htmx zig test</h1>
 
     <button hx-get="/click">Click Me</button>
+
+    <h2>Chat Room</h2>
+    <div hx-ext="ws" ws-connect="/chat">
+        <div id="notifications"></div>
+        <div id="chat-message" hx-swap="beforeend" hx-swap-oob="beforeend">
+
+        </div>
+        <form id="chat-form" ws-send>
+            <input name="chat-message">
+            <button type="submit">Send</button>
+        </form>
+    </div>
     
 </body>
 </html>

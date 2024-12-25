@@ -1,5 +1,6 @@
 const std = @import("std");
 const httpz = @import("httpz");
+const ws = @import("ws.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -8,7 +9,7 @@ pub fn main() !void {
     // We pass a "void" handler. This is the simplest, but limits what we can do
     // The last parameter is an instance of our handler. Since we have
     // a void handler, we pass a void value: i.e. {}.
-    var server = try httpz.Server(void).init(allocator, .{
+    var server = try httpz.Server(ws.Handler).init(allocator, .{
         .port = 8080,
         .request = .{
             // httpz has a number of tweakable configuration settings (see readme)
@@ -16,7 +17,7 @@ pub fn main() !void {
             // field count (since one of our examples reads form data)
             .max_form_count = 20,
         },
-    }, {});
+    }, ws.Handler{});
     defer server.deinit();
 
     // ensures a clean shutdown, finishing off any existing requests
@@ -27,17 +28,18 @@ pub fn main() !void {
 
     router.get("/", indexHTML, .{});
     router.get("/click", click, .{});
+    router.get("/chat", ws.ws, .{});
 
     std.debug.print("Server listening on port {d}\n", .{8080});
 
     try server.listen();
 }
 
-fn indexHTML(_: *httpz.Request, res: *httpz.Response) !void {
+fn indexHTML(_: ws.Handler, _: *httpz.Request, res: *httpz.Response) !void {
     res.body = @embedFile("html/index.html");
 }
 
-fn click(_: *httpz.Request, res: *httpz.Response) !void {
+fn click(_: ws.Handler, _: *httpz.Request, res: *httpz.Response) !void {
     std.debug.print("CLICK\n", .{});
     res.body =
         \\CLICKED
