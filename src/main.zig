@@ -4,11 +4,11 @@ const ws = @import("ws.zig");
 
 const PORT = 8080;
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
+var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+const alloc = gpa.allocator();
 
-    var server = try httpz.Server(ws.Handler).init(allocator, .{
+pub fn main() !void {
+    var server = try httpz.Server(ws.Handler).init(alloc, .{
         .port = PORT,
         .request = .{
             .max_form_count = 20,
@@ -23,8 +23,9 @@ pub fn main() !void {
 
     router.get("/", indexHTML, .{});
     router.get("/click", click, .{});
-    router.get("/modal", modal, .{});
+    router.get("/online", online, .{});
     router.get("/chat", ws.ws, .{});
+    router.get("/settings", settings, .{});
 
     std.debug.print("Server listening on port {d}\n", .{PORT});
 
@@ -42,16 +43,15 @@ fn click(_: ws.Handler, _: *httpz.Request, res: *httpz.Response) !void {
     ;
 }
 
-fn modal(_: ws.Handler, _: *httpz.Request, res: *httpz.Response) !void {
-    const alloc = std.heap.page_allocator;
-    var buf: [1024]u8 = undefined;
+fn online(_: ws.Handler, _: *httpz.Request, res: *httpz.Response) !void {
+    var buf = try alloc.alloc(u8, 1024);
     var buf_index: usize = 0;
 
-    var iter = ws.clients.keyIterator();
-    while (iter.next()) |id| {
+    var iter = ws.clients.valueIterator();
+    while (iter.next()) |client| {
         const str = try std.fmt.allocPrint(alloc,
-            \\<div id="modal-user-id" class="row">{d}</div>
-        , .{id.*});
+            \\<div id="online-user-id" class="row">{s}</div>
+        , .{client.*.name});
         if (buf_index + str.len > buf.len) {
             return error.BufferTooSmall;
         }
@@ -60,7 +60,7 @@ fn modal(_: ws.Handler, _: *httpz.Request, res: *httpz.Response) !void {
         buf_index += str.len;
     }
     res.body = try std.fmt.allocPrint(alloc,
-        \\\<div class="modal-dialog modal-dialog-centered">
+        \\<div class="modal-dialog modal-dialog-centered">
         \\<div class="modal-content">
         \\<div class="modal-header">
         \\<h5 class="modal-title">Online Users</h5>
@@ -74,4 +74,25 @@ fn modal(_: ws.Handler, _: *httpz.Request, res: *httpz.Response) !void {
         \\</div>
         \\</div>
     , .{buf[0..buf_index]});
+}
+
+fn settings(_: ws.Handler, req: *httpz.Request, res: *httpz.Response) !void {
+    const uid = req.header("UID") orelse return error.MissingUID;
+    const color = ws.clients.get(std.fmt.parseInt(u32, uid, 0) catch 0).?.color;
+
+    res.body = try std.fmt.allocPrint(alloc,
+        \\<div class="modal-dialog modal-dialog-centered">
+        \\<div class="modal-content">
+        \\<div class="modal-header">
+        \\<h5 class="modal-title">Settings</h5>
+        \\</div>
+        \\<div class="modal-body">
+        \\<input id="color-input" type="color" value="{s}">
+        \\</div>
+        \\<div class="modal-footer">
+        \\<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        \\</div>
+        \\</div>
+        \\</div>
+    , .{color});
 }

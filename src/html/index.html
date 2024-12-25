@@ -18,12 +18,12 @@
 <body>
 	<h1>ChatZX</h1>
 
-	<button hx-get="/modal" hx-target="#modals-here" hx-trigger="click" data-bs-toggle="modal"
-		data-bs-target="#modals-here" class="btn btn-secondary">
+	<button hx-get="/online" hx-target="#online-here" hx-trigger="click" data-bs-toggle="modal"
+		data-bs-target="#online-here" class="btn btn-secondary">
 		Online Users
 	</button>
 
-	<div id="modals-here" class="modal modal-blur fade" style="display: none" aria-hidden="false" tabindex="-1">
+	<div id="online-here" class="modal modal-blur fade" style="display: none" aria-hidden="false" tabindex="-1">
 		<div class="modal-dialog modal-lg modal-dialog-centered" role="document">
 			<div class="modal-content"></div>
 		</div>
@@ -40,6 +40,18 @@
 	</div>
 
 	<br />
+	
+	<button hx-get="/settings" hx-target="#settings-here" hx-trigger="click" data-bs-toggle="modal"
+		data-bs-target="#settings-here" class="btn btn-secondary">
+		Settings
+	</button>
+
+	<div id="settings-here" class="modal modal-blur fade" style="display: none" aria-hidden="false" tabindex="-1">
+		<div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+			<div class="modal-content"></div>
+		</div>
+	</div>
+
 	<button hx-get="/click">Click Me</button>
 	<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
 		integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"

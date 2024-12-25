@@ -32,6 +32,8 @@ pub fn build(b: *std.Build) void {
         .root_module = exe_mod,
     });
 
+    exe.linkLibC();
+
     const httpz = b.dependency("httpz", .{
         .target = target,
         .optimize = optimize,
