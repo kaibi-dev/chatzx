@@ -68,7 +68,7 @@ pub const Client = struct {
             \\<div id="notifications" hx-swap-oob="afterend">
             \\<script>
             \\htmx.on("htmx:configRequest", (e) => {{
-            \\    e.detail.headers.set("UID", '{d}');
+            \\    e.detail.headers["UID"] = "{d}";
             \\}});
             \\</script>
             \\</div>
@@ -138,13 +138,30 @@ pub fn ws(_: Handler, req: *httpz.Request, res: *httpz.Response) !void {
 }
 
 pub fn colorChange(_: Handler, req: *httpz.Request, res: *httpz.Response) !void {
-    const uid = req.header("UID") orelse return error.MissingUID;
+    const uid = req.header("uid") orelse return error.MissingUID;
+    const client = clients.get(std.fmt.parseInt(u32, uid, 0) catch 0) orelse return error.ClientNotFound;
 
-    const client = clients.get(uid) orelse return error.ClientNotFound;
+    const color = (try req.formData()).get("color-input");
+    std.debug.print("color: {s}\n", .{color orelse "null"});
+    client.color = color orelse return error.MissingColor;
 
     res.body = try std.fmt.allocPrint(alloc,
         \\<div id="notifications" hx-swap-oob="beforeend" hx-ext="remove-me" class="col">
-        \\<div id="notifications-user-id" remove-me="5s" class="row alert alert-info">{s} has changed color to {s}</div>
+        \\<div id="notifications-user-id" remove-me="5s" class="row alert alert-info">{s} has changed color to <span style="color: {s}">{s}</span></div>
         \\</div>
-    , .{ client.name, client.color });
+    , .{ client.name, client.color, client.color });
+}
+
+pub fn nameChange(_: Handler, req: *httpz.Request, res: *httpz.Response) !void {
+    const uid = req.header("uid") orelse return error.MissingUID;
+    const client = clients.get(std.fmt.parseInt(u32, uid, 0) catch 0) orelse return error.ClientNotFound;
+    const name = (try req.formData()).get("name-input") orelse return error.MissingName;
+    std.debug.print("name: {s}\n", .{name});
+
+    res.body = try std.fmt.allocPrint(alloc,
+        \\<div id="notifications" hx-swap-oob="beforeend" hx-ext="remove-me" class="col">
+        \\<div id="notifications-user-id" remove-me="5s" class="row alert alert-info">{s} has changed name to {s}</div>
+        \\</div>
+    , .{ client.name, name });
+    client.name = name;
 }

@@ -26,6 +26,8 @@ pub fn main() !void {
     router.get("/online", online, .{});
     router.get("/chat", ws.ws, .{});
     router.get("/settings", settings, .{});
+    router.post("/color", ws.colorChange, .{});
+    router.post("/name", ws.nameChange, .{});
 
     std.debug.print("Server listening on port {d}\n", .{PORT});
 
@@ -77,8 +79,9 @@ fn online(_: ws.Handler, _: *httpz.Request, res: *httpz.Response) !void {
 }
 
 fn settings(_: ws.Handler, req: *httpz.Request, res: *httpz.Response) !void {
-    const uid = req.header("UID") orelse return error.MissingUID;
-    const color = ws.clients.get(std.fmt.parseInt(u32, uid, 0) catch 0).?.color;
+    const uid = req.header("uid") orelse return error.MissingUID;
+
+    const client = ws.clients.get(std.fmt.parseInt(u32, uid, 0) catch 0) orelse return error.ClientNotFound;
 
     res.body = try std.fmt.allocPrint(alloc,
         \\<div class="modal-dialog modal-dialog-centered">
@@ -87,12 +90,16 @@ fn settings(_: ws.Handler, req: *httpz.Request, res: *httpz.Response) !void {
         \\<h5 class="modal-title">Settings</h5>
         \\</div>
         \\<div class="modal-body">
-        \\<input id="color-input" type="color" value="{s}">
+        \\<div class="row">
+        \\<h4>Name:</h4>
+        \\<input id="name-input" name="name-input" type="text" value="{s}" hx-post="/name">
+        \\</div>
+        \\<input id="color-input" name="color-input" type="color" value="{s}" hx-post="/color" hx-trigger="change">
         \\</div>
         \\<div class="modal-footer">
         \\<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         \\</div>
         \\</div>
         \\</div>
-    , .{color});
+    , .{ client.name, client.color });
 }
