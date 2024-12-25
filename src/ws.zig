@@ -15,7 +15,8 @@ const Headers = struct {
     @"HX-Current-URL": ?[]const u8,
 };
 
-const alloc = std.heap.page_allocator;
+var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
+const alloc = gpa.allocator();
 pub var clients = std.AutoHashMap(u32, Client).init(alloc);
 
 pub const Handler = struct {
@@ -23,31 +24,34 @@ pub const Handler = struct {
 };
 
 pub const Client = struct {
-    user_id: u32,
+    uid: u32,
+    name: []const u8 = "",
+    color: []const u8 = "#000000",
     conn: *websocket.Conn,
 
     const Context = struct {
-        user_id: u32,
+        uid: u32,
     };
 
     // context is any abitrary data that you want, you'll pass it to upgradeWebsocket
     pub fn init(conn: *websocket.Conn, ctx: *const Context) !Client {
         const client = Client{
             .conn = conn,
-            .user_id = ctx.user_id,
+            .uid = ctx.uid,
         };
-        try clients.put(client.user_id, client);
+        try clients.put(client.uid, client);
         return client;
     }
 
     // at this point, it's safe to write to conn
     pub fn afterInit(self: *Client) !void {
-        var buf: [1024]u8 = undefined;
-        const str = try std.fmt.bufPrint(&buf,
+        const str = try std.fmt.allocPrint(alloc,
             \\<div id="notifications" hx-swap-oob="beforeend" hx-ext="remove-me" class="col">
             \\<div id="notifications-user-id" remove-me="5s" class="row alert alert-info">{d} has joined</div>
             \\</div>
-        , .{self.user_id});
+        , .{self.uid});
+        const name = try std.fmt.allocPrint(alloc, "U{d}", .{self.uid});
+        self.name = name;
         var iter = clients.valueIterator();
         while (iter.next()) |client| {
             client.conn.write(str) catch |err| {
@@ -72,9 +76,9 @@ pub const Client = struct {
     }
 
     pub fn close(self: *Client) void {
-        const res = clients.remove(self.user_id);
+        const res = clients.remove(self.uid);
         if (res) {
-            std.debug.print("client closed: {d}\n", .{self.user_id});
+            std.debug.print("client closed: {d}\n", .{self.uid});
         }
         return;
     }
@@ -90,8 +94,8 @@ pub const Client = struct {
             \\    <div class="flex-grow-1">
             //        user + timestamp
             \\        <div id="chat-message-user-id" class="d-flex align-items-center mb-1">
-            \\            <h5 class="me-2 mb-0 text-primary">{d}</h5>
-            //            timestamp (this is retarded)
+            \\            <h5 class="me-2 mb-0 text-primary" style="color: {s}">{s}</h5>
+            //            timestamp
             \\            <small class="text-muted">{s}</small>
             \\        </div>
             //        message
@@ -100,14 +104,14 @@ pub const Client = struct {
             \\        </div>
             \\    </div>
             \\</div>
-        , .{ self.user_id, util.getDateTimeString(), msg });
+        , .{ self.color, self.name, util.getDateTimeString(), msg });
         return formatted;
     }
 };
 
 pub fn ws(_: Handler, req: *httpz.Request, res: *httpz.Response) !void {
     const rand = std.crypto.random;
-    const ctx = Client.Context{ .user_id = rand.uintAtMost(u32, std.math.maxInt(u32)) };
+    const ctx = Client.Context{ .uid = rand.uintAtMost(u32, std.math.maxInt(u32)) };
 
     if (try httpz.upgradeWebsocket(Client, req, res, &ctx) == false) {
         res.status = 500;

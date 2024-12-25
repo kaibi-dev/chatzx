@@ -13,6 +13,7 @@ pub fn main() !void {
         .request = .{
             .max_form_count = 20,
         },
+        .address = "0.0.0.0",
     }, ws.Handler{});
     defer server.deinit();
 
