@@ -15,7 +15,7 @@ const Headers = struct {
 };
 
 const alloc = std.heap.page_allocator;
-var clients = std.AutoHashMap(u32, Client).init(alloc);
+pub var clients = std.AutoHashMap(u32, Client).init(alloc);
 
 pub const Handler = struct {
     pub const WebsocketHandler = Client;
@@ -85,8 +85,8 @@ pub const Client = struct {
         const msg = json.value.object.get("chat-message").?.string;
         const formatted = try std.fmt.allocPrint(allocator,
             \\<div id="chat-message" hx-swap-oob="beforeend" class="col">
-            \\    <div id="chat-message-user-id" class="row">{d}</div>
-            \\    <div id="chat-message-text"   >{s}</div>
+            \\    <div id="chat-message-user-id" class="row"><h5>{d}</h5></div>
+            \\    <div id="chat-message-text"   ><p>{s}</p></div>
             \\</div>
         , .{ self.user_id, msg });
         return formatted;

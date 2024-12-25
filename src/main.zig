@@ -48,19 +48,35 @@ fn click(_: ws.Handler, _: *httpz.Request, res: *httpz.Response) !void {
 }
 
 fn modal(_: ws.Handler, _: *httpz.Request, res: *httpz.Response) !void {
-    res.body =
-        \\<div class="modal-dialog modal-dialog-centered">
+    const alloc = std.heap.page_allocator;
+    var buf: [1024]u8 = undefined;
+    var buf_index: usize = 0;
+
+    var iter = ws.clients.keyIterator();
+    while (iter.next()) |id| {
+        const str = try std.fmt.allocPrint(alloc,
+            \\<div id="modal-user-id" class="row">{d}</div>
+        , .{id.*});
+        if (buf_index + str.len > buf.len) {
+            return error.BufferTooSmall;
+        }
+
+        std.mem.copyForwards(u8, buf[buf_index..], str);
+        buf_index += str.len;
+    }
+    res.body = try std.fmt.allocPrint(alloc,
+        \\\<div class="modal-dialog modal-dialog-centered">
         \\<div class="modal-content">
         \\<div class="modal-header">
-        \\<h5 class="modal-title">Modal title</h5>
+        \\<h5 class="modal-title">Online Users</h5>
         \\</div>
         \\<div class="modal-body">
-        \\<p>Modal body text goes here.</p>
+        \\{s}
         \\</div>
         \\<div class="modal-footer">
         \\<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         \\</div>
         \\</div>
         \\</div>
-    ;
+    , .{buf[0..buf_index]});
 }
