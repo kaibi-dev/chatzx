@@ -84,11 +84,20 @@ pub const Client = struct {
 
         const msg = json.value.object.get("chat-message").?.string;
         const formatted = try std.fmt.allocPrint(allocator,
-            \\<div id="chat-message" hx-swap-oob="beforeend" class="col">
-            \\    <div id="chat-message-user-id" class="row"><h5>{d}</h5></div>
-            \\    <div id="chat-message-text"   ><p>{s}</p></div>
+            \\<div id="chat-message" hx-swap-oob="beforeend" class="d-flex mb-3">
+            \\    <div class="flex-grow-1">
+            //        user + timestamp
+            \\        <div id="chat-message-user-id" class="d-flex align-items-center mb-1">
+            \\            <h5 class="me-2 mb-0 text-primary">{d}</h5>
+            \\            <small class="text-muted">{d}</small>
+            \\        </div>
+            //        message
+            \\        <div id="chat-message-text" class="bg-light rounded p-2">
+            \\            <p class="mb-0">{s}</p>
+            \\        </div>
+            \\    </div>
             \\</div>
-        , .{ self.user_id, msg });
+        , .{ self.user_id, std.time.timestamp(), msg });
         return formatted;
     }
 };
