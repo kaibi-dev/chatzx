@@ -43,9 +43,17 @@ pub const Client = struct {
     pub fn afterInit(self: *Client) !void {
         var buf: [1024]u8 = undefined;
         const str = try std.fmt.bufPrint(&buf,
-            \\<div id="notifications" hx-swap-oob="beforeend"><script>alert("welcome {d}")</script></div>
+            \\<div id="notifications" hx-swap-oob="beforeend" hx-ext="remove-me" class="col">
+            \\<div id="notifications-user-id" remove-me="5s" class="row alert alert-info">{d} has joined</div>
+            \\</div>
         , .{self.user_id});
-        return self.conn.write(str);
+        var iter = clients.valueIterator();
+        while (iter.next()) |client| {
+            client.conn.write(str) catch |err| {
+                std.debug.print("error writing notification to client: {s}\n", .{@errorName(err)});
+            };
+        }
+        return;
     }
 
     pub fn clientMessage(self: *Client, allocator: std.mem.Allocator, data: []const u8) !void {
