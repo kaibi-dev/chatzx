@@ -1,4 +1,5 @@
 const std = @import("std");
+const util = @import("util.zig");
 const httpz = @import("httpz");
 const websocket = httpz.websocket;
 
@@ -83,13 +84,15 @@ pub const Client = struct {
         defer json.deinit();
 
         const msg = json.value.object.get("chat-message").?.string;
+
         const formatted = try std.fmt.allocPrint(allocator,
             \\<div id="chat-message" hx-swap-oob="beforeend" class="d-flex mb-3">
             \\    <div class="flex-grow-1">
             //        user + timestamp
             \\        <div id="chat-message-user-id" class="d-flex align-items-center mb-1">
             \\            <h5 class="me-2 mb-0 text-primary">{d}</h5>
-            \\            <small class="text-muted">{d}</small>
+            //            timestamp (this is retarded)
+            \\            <small class="text-muted">{s}</small>
             \\        </div>
             //        message
             \\        <div id="chat-message-text" class="bg-light rounded p-2">
@@ -97,7 +100,7 @@ pub const Client = struct {
             \\        </div>
             \\    </div>
             \\</div>
-        , .{ self.user_id, std.time.timestamp(), msg });
+        , .{ self.user_id, util.getDateTimeString(), msg });
         return formatted;
     }
 };
