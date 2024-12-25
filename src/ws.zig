@@ -15,7 +15,7 @@ const Headers = struct {
 };
 
 const alloc = std.heap.page_allocator;
-var clients = std.ArrayList(Client).init(alloc);
+var clients = std.AutoHashMap(u32, Client).init(alloc);
 
 pub const Handler = struct {
     pub const WebsocketHandler = Client;
@@ -35,7 +35,7 @@ pub const Client = struct {
             .conn = conn,
             .user_id = ctx.user_id,
         };
-        try clients.append(client);
+        try clients.put(client.user_id, client);
         return client;
     }
 
@@ -52,10 +52,20 @@ pub const Client = struct {
         // echo back to client
         const formatted = try formatResponse(self, allocator, data);
         std.debug.print("clientMessage: {s}\n", .{formatted});
-        for (clients.items) |client| {
+
+        var iter = clients.valueIterator();
+        while (iter.next()) |client| {
             client.conn.write(formatted) catch |err| {
                 std.debug.print("error writing to client: {s}\n", .{@errorName(err)});
             };
+        }
+        return;
+    }
+
+    pub fn close(self: *Client) void {
+        const res = clients.remove(self.user_id);
+        if (res) {
+            std.debug.print("client closed: {d}\n", .{self.user_id});
         }
         return;
     }
@@ -66,9 +76,9 @@ pub const Client = struct {
 
         const msg = json.value.object.get("chat-message").?.string;
         const formatted = try std.fmt.allocPrint(allocator,
-            \\<div id="chat-message" hx-swap-oob="beforeend">
-            \\    <div id="chat-message-user-id">{d}</div>
-            \\    <div id="chat-message-text">{s}</div>
+            \\<div id="chat-message" hx-swap-oob="beforeend" class="col">
+            \\    <div id="chat-message-user-id" class="row">{d}</div>
+            \\    <div id="chat-message-text"   >{s}</div>
             \\</div>
         , .{ self.user_id, msg });
         return formatted;

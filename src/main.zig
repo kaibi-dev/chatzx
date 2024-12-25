@@ -28,6 +28,7 @@ pub fn main() !void {
 
     router.get("/", indexHTML, .{});
     router.get("/click", click, .{});
+    router.get("/modal", modal, .{});
     router.get("/chat", ws.ws, .{});
 
     std.debug.print("Server listening on port {d}\n", .{8080});
@@ -43,5 +44,23 @@ fn click(_: ws.Handler, _: *httpz.Request, res: *httpz.Response) !void {
     std.debug.print("CLICK\n", .{});
     res.body =
         \\CLICKED
+    ;
+}
+
+fn modal(_: ws.Handler, _: *httpz.Request, res: *httpz.Response) !void {
+    res.body =
+        \\<div class="modal-dialog modal-dialog-centered">
+        \\<div class="modal-content">
+        \\<div class="modal-header">
+        \\<h5 class="modal-title">Modal title</h5>
+        \\</div>
+        \\<div class="modal-body">
+        \\<p>Modal body text goes here.</p>
+        \\</div>
+        \\<div class="modal-footer">
+        \\<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        \\</div>
+        \\</div>
+        \\</div>
     ;
 }
