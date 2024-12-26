@@ -152,32 +152,39 @@ pub fn parseHeaders(headers: *httpz.key_value.StringKeyValue) !void {
     return;
 }
 
-pub fn colorChange(_: Handler, req: *httpz.Request, _: *httpz.Response) !void {
+pub fn colorChange(_: Handler, req: *httpz.Request, res: *httpz.Response) !void {
     try parseHeaders(req.headers);
     const uid = req.header("uid") orelse return error.MissingUID;
     const client = clients.get(std.fmt.parseInt(u32, uid, 0) catch 0) orelse return error.ClientNotFound;
     const color = (try req.formData()).get("color-input") orelse return error.MissingColor;
+    const old_color = try alloc.dupe(u8, client.color);
+    defer alloc.free(old_color);
     std.debug.print("color: {s}\nname: {s}\n", .{ client.color, client.name });
     try client.changeColor(color);
     std.debug.print("client.color: {s}\n", .{client.color});
-    // res.body = try std.fmt.allocPrint(alloc,
-    //     \\<div id="notifications" hx-swap-oob="beforeend" hx-ext="remove-me" class="col">
-    //     \\<div id="notifications-user-id" remove-me="5s" class="row alert alert-info"><span style="color: {s}">{s}</span> has changed color</div>
-    //     \\</div>
-    // , .{ color, client.name });
-
+    res.body = try std.fmt.allocPrint(alloc,
+        \\<div id="notifications" hx-swap-oob="beforeend" hx-ext="remove-me" class="col">
+        \\<div id="notifications-user-id" remove-me="5s" class="row alert alert-info"><p>
+        \\<span style="color: {s}">{s}</span> -> <span style="color: {s}">{s}</span>
+        \\</p></div>
+        \\</div>
+    , .{ old_color, client.name, client.color, client.name });
 }
 
-pub fn nameChange(_: Handler, req: *httpz.Request, _: *httpz.Response) !void {
+pub fn nameChange(_: Handler, req: *httpz.Request, res: *httpz.Response) !void {
     const uid = req.header("uid") orelse return error.MissingUID;
     const client = clients.get(std.fmt.parseInt(u32, uid, 0) catch 0) orelse return error.ClientNotFound;
     const name = (try req.formData()).get("name-input") orelse return error.MissingName;
+    const old_name = try alloc.dupe(u8, client.name);
+    defer alloc.free(old_name);
     std.debug.print("name: {s}\ncolor: {s}\n", .{ name, client.color });
     try client.changeName(name);
     std.debug.print("client.name: {s}\n", .{client.name});
-    // res.body = try std.fmt.allocPrint(alloc,
-    //     \\<div id="notifications" hx-swap-oob="beforeend" hx-ext="remove-me" class="col">
-    //     \\<div id="notifications-user-id" remove-me="5s" class="row alert alert-info">{s} has changed name to <span style="color: {s}">{s}</span></div>
-    //     \\</div>
-    // , .{ client.name, client.color, name });
+    res.body = try std.fmt.allocPrint(alloc,
+        \\<div id="notifications" hx-swap-oob="beforeend" hx-ext="remove-me" class="col">
+        \\<div id="notifications-user-id" remove-me="5s" class="row alert alert-info"><p>
+        \\<span style="color: {s}">{s}</span> -> <span style="color: {s}">{s}</span>
+        \\</p></div>
+        \\</div>
+    , .{ client.color, old_name, client.color, name });
 }
