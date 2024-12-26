@@ -7,14 +7,6 @@ pub const std_options = std.Options{ .log_scope_levels = &[_]std.log.ScopeLevel{
     .{ .scope = .websocket, .level = .err },
 } };
 
-const Headers = struct {
-    @"HX-Request": ?[]const u8,
-    @"HX-Trigger": ?[]const u8,
-    @"HX-Trigger-Name": ?[]const u8,
-    @"HX-Target": ?[]const u8,
-    @"HX-Current-URL": ?[]const u8,
-};
-
 var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
 const alloc = gpa.allocator();
 pub var clients = std.AutoHashMap(u32, *Client).init(alloc);
@@ -26,7 +18,7 @@ pub const Handler = struct {
 pub const Client = struct {
     uid: u32,
     name: []const u8 = "",
-    color: []const u8 = "#000000",
+    color: []const u8 = "",
     conn: *websocket.Conn,
 
     const Context = struct {
@@ -47,6 +39,7 @@ pub const Client = struct {
         try clients.put(self.uid, self);
         const name = try std.fmt.allocPrint(alloc, "U{d}", .{self.uid});
         self.name = name;
+        self.color = "#000000";
 
         const str = try std.fmt.allocPrint(alloc,
             \\<div id="notifications" hx-swap-oob="beforeend" hx-ext="remove-me" class="col">
@@ -101,6 +94,18 @@ pub const Client = struct {
         return;
     }
 
+    fn changeName(self: *Client, name: []const u8) !void {
+        const new_name = try alloc.dupe(u8, name);
+        alloc.free(self.name);
+        self.name = new_name;
+    }
+
+    fn changeColor(self: *Client, color: []const u8) !void {
+        const new_color = try alloc.dupe(u8, color);
+        // alloc.free(self.color); // THIS BREAKS???
+        self.color = new_color;
+    }
+
     fn formatResponse(self: *Client, allocator: std.mem.Allocator, data: []const u8) ![]const u8 {
         const json = try std.json.parseFromSlice(std.json.Value, allocator, data, .{});
         defer json.deinit();
@@ -137,31 +142,42 @@ pub fn ws(_: Handler, req: *httpz.Request, res: *httpz.Response) !void {
     }
 }
 
-pub fn colorChange(_: Handler, req: *httpz.Request, res: *httpz.Response) !void {
-    const uid = req.header("uid") orelse return error.MissingUID;
-    const client = clients.get(std.fmt.parseInt(u32, uid, 0) catch 0) orelse return error.ClientNotFound;
-
-    const color = (try req.formData()).get("color-input");
-    std.debug.print("color: {s}\n", .{color orelse "null"});
-    client.color = color orelse return error.MissingColor;
-
-    res.body = try std.fmt.allocPrint(alloc,
-        \\<div id="notifications" hx-swap-oob="beforeend" hx-ext="remove-me" class="col">
-        \\<div id="notifications-user-id" remove-me="5s" class="row alert alert-info">{s} has changed color to <span style="color: {s}">{s}</span></div>
-        \\</div>
-    , .{ client.name, client.color, client.color });
+pub fn parseHeaders(headers: *httpz.key_value.StringKeyValue) !void {
+    var it = headers.iterator();
+    while (it.next()) |header| {
+        const name = header.key;
+        const value = header.value;
+        std.debug.print("header: {s}: {s}\n", .{ name, value });
+    }
+    return;
 }
 
-pub fn nameChange(_: Handler, req: *httpz.Request, res: *httpz.Response) !void {
+pub fn colorChange(_: Handler, req: *httpz.Request, _: *httpz.Response) !void {
+    try parseHeaders(req.headers);
+    const uid = req.header("uid") orelse return error.MissingUID;
+    const client = clients.get(std.fmt.parseInt(u32, uid, 0) catch 0) orelse return error.ClientNotFound;
+    const color = (try req.formData()).get("color-input") orelse return error.MissingColor;
+    std.debug.print("color: {s}\nname: {s}\n", .{ client.color, client.name });
+    try client.changeColor(color);
+    std.debug.print("client.color: {s}\n", .{client.color});
+    // res.body = try std.fmt.allocPrint(alloc,
+    //     \\<div id="notifications" hx-swap-oob="beforeend" hx-ext="remove-me" class="col">
+    //     \\<div id="notifications-user-id" remove-me="5s" class="row alert alert-info"><span style="color: {s}">{s}</span> has changed color</div>
+    //     \\</div>
+    // , .{ color, client.name });
+
+}
+
+pub fn nameChange(_: Handler, req: *httpz.Request, _: *httpz.Response) !void {
     const uid = req.header("uid") orelse return error.MissingUID;
     const client = clients.get(std.fmt.parseInt(u32, uid, 0) catch 0) orelse return error.ClientNotFound;
     const name = (try req.formData()).get("name-input") orelse return error.MissingName;
-    std.debug.print("name: {s}\n", .{name});
-
-    res.body = try std.fmt.allocPrint(alloc,
-        \\<div id="notifications" hx-swap-oob="beforeend" hx-ext="remove-me" class="col">
-        \\<div id="notifications-user-id" remove-me="5s" class="row alert alert-info">{s} has changed name to {s}</div>
-        \\</div>
-    , .{ client.name, name });
-    client.name = name;
+    std.debug.print("name: {s}\ncolor: {s}\n", .{ name, client.color });
+    try client.changeName(name);
+    std.debug.print("client.name: {s}\n", .{client.name});
+    // res.body = try std.fmt.allocPrint(alloc,
+    //     \\<div id="notifications" hx-swap-oob="beforeend" hx-ext="remove-me" class="col">
+    //     \\<div id="notifications-user-id" remove-me="5s" class="row alert alert-info">{s} has changed name to <span style="color: {s}">{s}</span></div>
+    //     \\</div>
+    // , .{ client.name, client.color, name });
 }

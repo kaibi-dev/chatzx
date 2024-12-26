@@ -7,6 +7,8 @@ const PORT = 8080;
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const alloc = gpa.allocator();
 
+var click_count: usize = 0;
+
 pub fn main() !void {
     var server = try httpz.Server(ws.Handler).init(alloc, .{
         .port = PORT,
@@ -39,10 +41,10 @@ fn indexHTML(_: ws.Handler, _: *httpz.Request, res: *httpz.Response) !void {
 }
 
 fn click(_: ws.Handler, _: *httpz.Request, res: *httpz.Response) !void {
-    std.debug.print("CLICK\n", .{});
-    res.body =
-        \\CLICKED
-    ;
+    click_count += 1;
+    res.body = try std.fmt.allocPrint(alloc,
+        \\CLICK {d}
+    , .{click_count});
 }
 
 fn online(_: ws.Handler, _: *httpz.Request, res: *httpz.Response) !void {
@@ -52,8 +54,8 @@ fn online(_: ws.Handler, _: *httpz.Request, res: *httpz.Response) !void {
     var iter = ws.clients.valueIterator();
     while (iter.next()) |client| {
         const str = try std.fmt.allocPrint(alloc,
-            \\<div id="online-user-id" class="row">{s}</div>
-        , .{client.*.name});
+            \\<div id="online-user-id" class="row" style="color: {s}">{s}</div>
+        , .{ client.*.color, client.*.name });
         if (buf_index + str.len > buf.len) {
             return error.BufferTooSmall;
         }
@@ -92,9 +94,14 @@ fn settings(_: ws.Handler, req: *httpz.Request, res: *httpz.Response) !void {
         \\<div class="modal-body">
         \\<div class="row">
         \\<h4>Name:</h4>
-        \\<input id="name-input" name="name-input" type="text" value="{s}" hx-post="/name">
+        \\<form>
+        \\<input id="name-input" name="name-input" type="text" value="{s}" hx-ext="debug">
+        \\<button type="button" class="btn btn-primary" hx-post="/name" hx-trigger="click" hx-swap="none">Save</button>
+        \\</form>
         \\</div>
+        \\<form>
         \\<input id="color-input" name="color-input" type="color" value="{s}" hx-post="/color" hx-trigger="change">
+        \\</form>
         \\</div>
         \\<div class="modal-footer">
         \\<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
