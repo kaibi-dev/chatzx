@@ -102,7 +102,8 @@ pub const Client = struct {
 
     fn changeColor(self: *Client, color: []const u8) !void {
         const new_color = try alloc.dupe(u8, color);
-        // alloc.free(self.color); // THIS BREAKS???
+        // alloc.free(self.color); // THIS BREAKS??? -> https://github.com/ziglang/zig/issues/4298
+        // if this is a memory leak i kill myself
         self.color = new_color;
     }
 
